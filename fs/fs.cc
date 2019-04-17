@@ -15,6 +15,8 @@ int make_fs(char *disk_name) {
 	super_block *super_block_tmp = new super_block();
 	if (super_block_tmp == nullptr) return -1;
 
+    // The first block of the disk contains file information listed below.
+    // The data for each file is stored in 36 byte chunks.
 	char buf[BLOCK_SIZE];
 	int *buf_ptr;
 	memset(buf, 0, BLOCK_SIZE);
@@ -55,10 +57,10 @@ int mount_fs(char *disk_name) {
 		super_block_ptr->directory[i].num_blocks = *(buf_ptr++);
 		super_block_ptr->directory[i].num_fd = 0;
 		snprintf(super_block_ptr->directory[i].name, MAXIMUM_FILENAME_LENGTH+1, "%s", buf+(24+(32*i)));
-		//super_block_ptr->directory[i].name[15] = '\0';
 		buf_ptr += 4;
 	}
 
+    // Reset state of all file descriptors.
 	for (int i = 0; i < MAXIMUM_FILE_DESCRIPTORS; ++i) {
 		file_descriptors[i].free= true;
 		file_descriptors[i].file = -1;
@@ -126,6 +128,8 @@ int find_free_fd() {
 	return -1;
 }
 
+// Traverse all files in loaded directory to find a file with matching name.
+// For a larger use case could sort directory alphabetically by name or load file info into a hashmap.
 int search_file(char *name) {
 	for (int i = 0; i < MAXIMUM_FILES; ++i) {
 		if (strcmp(super_block_ptr->directory[i].name, name) == 0) {
@@ -157,7 +161,6 @@ int fs_create(char *name) {
 			super_block_ptr->directory[i].num_blocks = 0;
 			super_block_ptr->directory[i].num_fd = 0;
 			snprintf(super_block_ptr->directory[i].name, MAXIMUM_FILENAME_LENGTH+1, "%s", name);
-			//super_block_ptr->directory[i].name[15] = '\0';
 			return 0;
 		}
 	}
@@ -169,7 +172,6 @@ int fs_write(int fildes, void *buf, size_t nbyte) {
 		return -1;
 	}
 	if (nbyte == 0) return 0;
-	//int n_free_bytes = 0;
 	/*
 	   for (int i = 0; i < MAXIMUM_FILES; ++i) {
 	   if (super_block_ptr->directory[i].active) n_free_bytes += super_block_ptr->directory[i].file_size;
@@ -186,7 +188,8 @@ int fs_write(int fildes, void *buf, size_t nbyte) {
 
 	int block_to_write = file->next_block;
 	int last_set = file->file_size;
-
+    
+    // If no data has been stored from this file, find and allocate a data block for it.
 	if (block_to_write == -1) {
 		file->next_block = find_free_block();
 		block_to_write = file->next_block;
@@ -209,17 +212,16 @@ int fs_write(int fildes, void *buf, size_t nbyte) {
 		block_to_write = tmp_block;
 	}
 	char *current_buf_index = (char*)buf;
-	while (n_bytes_written > 0) {// && n_free_bytes > 0) 
+	while (n_bytes_written > 0) {
 
 		char block[BLOCK_SIZE];
 		memset(block, 0, BLOCK_SIZE);
 		block_read(block_to_write, block);
 		for (int i = offset; i < BLOCK_SIZE; ++i) {
-			if (n_bytes_written == 0) break;// || n_free_bytes == 0) break;
+			if (n_bytes_written == 0) break;
 			block[i] = *(current_buf_index++);
             ++file_descriptors[fildes].offset;
 			--n_bytes_written;
-			//--n_free_bytes;
 			if (last_set > file_descriptors[fildes].offset) last_set--;
 			else {
 				file->file_size++;
@@ -229,7 +231,7 @@ int fs_write(int fildes, void *buf, size_t nbyte) {
 		block_write(block_to_write, block);
 		offset = 0;
 
-		if (n_bytes_written > 0) {// && n_free_bytes > 0) 
+		if (n_bytes_written > 0) {
 			int block_tmp = find_next_block(block_to_write);
 			if (block_tmp == -1) {
 				block_tmp = find_free_block(block_to_write);
@@ -245,7 +247,6 @@ int fs_write(int fildes, void *buf, size_t nbyte) {
 }
 
 int find_next_block(int current_block) {
-	//if ((((current_block-5)/1024)+1) > 4) return -1;
 	char buf[BLOCK_SIZE];
 	int *buf_ptr;
 	memset(buf, 0, BLOCK_SIZE);
@@ -255,6 +256,7 @@ int find_next_block(int current_block) {
 	return *buf_ptr;
 }
 
+// Data blocks are accessed from block 5 onwards.
 int find_free_block() {
 	for (int i = 0; i < 4; ++i) {
 		char buf[BLOCK_SIZE];
