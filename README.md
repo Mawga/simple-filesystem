@@ -21,15 +21,11 @@ File descriptors have member variables:
 ## Restrictions
 Restrictions to this project include:
 
-A virtual disk of 8192 blocks, each block with a capacity of 4KB.
-
-No more than 64 files on a disk.
-
-No more than 32 file descriptors.
-
-A maximum file size of 16 MB.
-
-A maximum of 16 MB of data on the disk (4096 blocks).
+    A virtual disk of 8192 blocks, each block with a capacity of 4KB.
+    No more than 64 files on a disk.
+    No more than 32 file descriptors.
+    A maximum file size of 16 MB.
+    A maximum of 16 MB of data on the disk (4096 blocks).
 
 ## Implementation
 I created a disk in which the first block (0 on disk) holds directory/super block information and is loaded/saved on mount/umount.
