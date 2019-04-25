@@ -3,43 +3,58 @@
 
 ## Project Details
 The super block holds data such as the number of files, number of active file descriptors, and a file directory.
+
 The file directory contains information on all files:
+
     Whether it is active
     Name
     The value of the head block
     The number of blocks in the file
     The number of file descriptors accessing it
+    
 File descriptors have member variables:
+
     free
     file directory index
     and offset
 
 ## Restrictions
 Restrictions to this project include:
+
 A virtual disk of 8192 blocks, each block with a capacity of 4KB.
+
 No more than 64 files on a disk.
+
 No more than 32 file descriptors.
+
 A maximum file size of 16 MB.
+
 A maximum of 16 MB of data on the disk (4096 blocks).
 
 ## Implementation
 I created a disk in which the first block (0 on disk) holds directory/super block information and is loaded/saved on mount/umount.
 
 The second-fourth blocks (1-5) contain metadata of the next block for each file.
+
 The metadata blocks contain contiguous integer values which correspond to the next block value (integer value of block on disk).
 
 Mounting this disk requires the accessing the 0th block with int pointers and accessing metadata is done in the same way.
 
 I created helper functions:
+
     int find_free_fd();
     int search_file(char *name);
     int find_next_block(int current_block);
     int find_free_block();
     int find_free_block(int current_block);
     int clear_metadata(int current_block);
+    
 For the purpose of the implemented functions.
+
 find_free_block() causes the metadata of the free block to point to -1.
+
 find_free_block(int current_block) will also change the metadata of current_block to have the value of this next free block.
+
 clear_metadata clears the metadata a certain block and will return the next block in the chain.
 
 ## fs.cc
